@@ -60,32 +60,37 @@ void fillElement(int i, int j) {
 void fillMatrix() {
     int cycle = ceil((float)lenA/threadNums); //separation of the matrix
     for (int k = 0; k < cycle; k++) {
-        int start = k * threadNums;
-        int end = (k == cycle-1) ? lenA : (start + threadNums - 1);
+        int start = k * threadNums + 1;
+        int thread = (k == cycle - 1) ? (lenA - start + 1) : threadNums;
+        int end = start + thread - 1;
         //sequential part 1
-        for (int i = 1; i < threadNums; i++) {
-            for (int j = 1; j < 1 + threadNums - i; j++) {
-                fillElement(start+i-1, j);
+        #pragma omp master
+        {
+            for (int i = 1; i < thread; i++)
+            {
+                for (int j = 1; j < 1 + thread - i; j++)
+                {
+                    fillElement(start + i - 1, j);
+                }
             }
         }
         //parallel part
-        int begin;
-        int num = lenB - (threadNums - 1);
-        omp_set_num_threads(threadNums);
-        #pragma omp parallel for private(begin) firstprivate(num)
-        for (int i = start; i <= end; i++) {
-            begin = threadNums - (i - start);
-            while (num > 0) {
-                fillElement(i, begin);
-                begin++;
-                num--;
+        for (int count = 0; count < lenB - (thread - 1); count++) {
+            omp_set_num_threads(thread);
+            #pragma omp parallel for
+            for (int i = start; i <= end; i++) {
+                fillElement(i, thread - (i - start) + count);
             }
         }
-        #pragma omp barrier
         //sequential part 2
-        for (int i = 1; i < threadNums; i++) {
-            for (int j = lenB - (i - 1); j <= lenB; j++) {
-                fillElement(start+i, j);
+        #pragma omp master
+        {
+            for (int i = 1; i < thread; i++)
+            {
+                for (int j = lenB - (i - 1); j <= lenB; j++)
+                {
+                    fillElement(start + i, j);
+                }
             }
         }
     }
@@ -191,9 +196,6 @@ string alignmentA;
 string alignmentB;
 dp.backtracking(alignmentA, alignmentB);
 clock_t end = clock();
-//cout << "alignment result:" << endl;
-//cout << alignmentA << endl;
-//cout << alignmentB << endl;
 cout << "Execution time: " << (end - start) << "ms" << endl;
 system("pause");
 }
