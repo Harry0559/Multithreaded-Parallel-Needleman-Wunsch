@@ -160,6 +160,19 @@ public:
             j--;
         }
     }
+    void showMatrix()
+    {
+        string col = "--" + B;
+        string row = "-" + A;
+        for (int i = 0; i < col.size(); i++) cout << setw(5) <<col[i];
+        cout << endl;
+        for (int i = 0; i < row.size(); i++)
+        {
+            cout << setw(5) <<row[i];
+            for (int j = 0; j < lenB + 1; j++) cout << setw(5) <<matrix[i][j];
+            cout << endl;
+        }
+    }
 };
 
 vector<string> readSequences(string &pathA, string &pathB)
@@ -190,6 +203,7 @@ int main(int argc, char* argv[])
     if (argc == 1 || (argc == 2 && strcmp(argv[1],"--interactive") == 0)) mode = 0;
     else if (argc == 2 && strcmp(argv[1],"--file") == 0) mode = 1;
     else if (argc == 2 && strcmp(argv[1],"--help") == 0) mode = 2;
+    else if (argc == 2 && strcmp(argv[1],"--demo") == 0) mode = 3;
     else {
         cout << "The command is wrong. The correct usage is shown below:\n" << endl;
         mode = 2;
@@ -225,21 +239,21 @@ int main(int argc, char* argv[])
     }
     else if (mode == 1) //file mode
     {
-        vector<string> setA = {"data/3500.fasta","data/6995.fasta","data/13100.fasta","data/34350.fasta"};
-        vector<string> setB = {"data/3503.fasta","data/7031.fasta","data/14507.fasta","data/35213.fasta"};
-        vector<string> nameA = {"3500","13100","34350"};
-        vector<string> nameB = {"3503","14507","35213"};
-        vector<int> threads = {1,2,4,8};
+        vector<string> setA = {"data/3500.fasta","data/6995.fasta"};
+        vector<string> setB = {"data/3503.fasta","data/7031.fasta"};
+        vector<string> nameA = {"3500","6995"};
+        vector<string> nameB = {"3503","7031"};
+        vector<int> threads = {2,4,8,16};
         vector<string> sequences;
         clock_t start;
         clock_t end;
         clock_t execution_time;
-        clock_t serial_time;
+        clock_t two_thread_time;
         string name;
         ofstream ofile;
         float speedUp;
         cout << setw(15) << "SeqA:SeqB" << setw(22) << "Number of threads" << setw(23) << "Execution time(ms)" << setw(12) << "Speedup" << endl;
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 2; i++) {
             sequences = readSequences(setA[i], setB[i]);
             for (int j = 0; j < 4; j++) {
                 start = clock();
@@ -251,8 +265,8 @@ int main(int argc, char* argv[])
                 dp.backtracking(alignmentA, alignmentB);
                 end = clock();
                 execution_time = end - start;
-                if (j == 0) serial_time = execution_time;
-                speedUp = (float)serial_time / execution_time;
+                if (j == 0) two_thread_time = execution_time;
+                speedUp = (float)two_thread_time / execution_time;
                 name = "output/" + nameA[i] + "_" + nameB[i] + "_" + to_string(threads[j]) + ".txt";
                 ofile.open(name.c_str());
                 ofile << execution_time << endl;
@@ -260,7 +274,7 @@ int main(int argc, char* argv[])
                 ofile.close();
                 cout << setw(15) << nameA[i]+":"+nameB[i] << setw(22) << threads[j] << setw(23) << execution_time << setw(12) << setprecision(3) << speedUp << endl;
             }
-            if (i == 3) continue;
+            if (i == 1) continue;
             sequences = readSequences(setA[i+1], setB[i]);
             for (int j = 0; j < 4; j++) {
                 start = clock();
@@ -272,8 +286,8 @@ int main(int argc, char* argv[])
                 dp.backtracking(alignmentA, alignmentB);
                 end = clock();
                 execution_time = end - start;
-                if (j == 0) serial_time = execution_time;
-                speedUp = (float)serial_time / execution_time;
+                if (j == 0) two_thread_time = execution_time;
+                speedUp = (float)two_thread_time / execution_time;
                 name = "output/" + nameA[i+1] + "_" + nameB[i] + "_" + to_string(threads[j]) + ".txt";
                 ofile.open(name.c_str());
                 ofile << execution_time << endl;
@@ -291,6 +305,20 @@ int main(int argc, char* argv[])
         cout << setw(40) << setiosflags(ios::left) << "./NW_OMP_Protein.exe --interactive" << "Interactive mode by explicit command" << endl;
         cout << setw(40) << setiosflags(ios::left) << "./NW_OMP_Protein.exe --file" << "File mode" << endl;
         cout << setw(40) << setiosflags(ios::left) << "./NW_OMP_Protein.exe --help" << "Show the correct usage of the command" << endl;
+        cout << setw(40) << setiosflags(ios::left) << "./NW_OMP_Protein.exe --demo" << "Demonstrate the matrix to verify the correctness" << endl;
+    }
+    else if (mode == 3) //demonstration mode
+    {
+        string pathA = "data/seqA.fasta";
+        string pathB = "data/seqB.fasta";
+        vector<string> sequences = readSequences(pathA,pathB);
+        int threads;
+        cout << "Number of threads: ";
+        cin >> threads;
+        myMatrix dp(sequences[0], sequences[1], threads);
+        dp.initialize();
+        dp.fillMatrix();
+        dp.showMatrix();
     }
 }
 
