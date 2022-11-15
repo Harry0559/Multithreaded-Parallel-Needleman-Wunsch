@@ -4,6 +4,9 @@
         "vector": "cpp",
         "xstring": "cpp",
         "iosfwd": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "fstream": "cpp",
+        "iomanip": "cpp",
+        "ostream": "cpp"
     }
 }

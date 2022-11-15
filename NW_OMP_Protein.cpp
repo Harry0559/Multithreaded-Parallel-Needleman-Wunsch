@@ -6,7 +6,8 @@
 #include <vector>
 #include <omp.h>
 #include <time.h>
-// #include<iomanip>
+#include<iomanip>
+#include<string.h>
 
 using namespace std;
 
@@ -182,34 +183,117 @@ vector<string> readSequences(string &pathA, string &pathB)
     return ans;
 }
 
-int main()
+
+int main(int argc, char* argv[])
 {
-    vector<string> setA = {"data/3500.fasta","data/6995.fasta","data/13100.fasta","data/34350.fasta"};
-    vector<string> setB = {"data/3503.fasta","data/7031.fasta","data/14507.fasta","data/35213.fasta"};
-    int indexA;
-    int indexB;
-    cout << "length of sequence A(0:3500, 1:6995, 2:13100, 3:34350): ";
-    cin >> indexA;
-    cout << "length of sequence B(0:3503, 1:7031, 2:14507, 3:35213): ";
-    cin >> indexB;
-    cout << "\nThe sequence data is being read from the file..." << endl;
-    vector<string> sequences = readSequences(setA[indexA], setB[indexB]);
-    cout << "Reading has finished." << endl << endl;
-    int threads;
-    cout << "number of threads: ";
-    cin >> threads;
-    cout << "\nstart to time..." << endl;
-    clock_t start = clock();
-    myMatrix dp(sequences[0], sequences[1], threads);
-    dp.initialize();
-    dp.fillMatrix();
-    string alignmentA;
-    string alignmentB;
-    dp.backtracking(alignmentA, alignmentB);
-    clock_t end = clock();
-    cout << "Execution time: " << (end - start) << "ms" << endl;
-    system("pause");
+    int mode = 0;
+    if (argc == 1 || (argc == 2 && strcmp(argv[1],"--interactive") == 0)) mode = 0;
+    else if (argc == 2 && strcmp(argv[1],"--file") == 0) mode = 1;
+    else if (argc == 2 && strcmp(argv[1],"--help") == 0) mode = 2;
+    else {
+        cout << "The command is wrong. The correct usage is shown below:\n" << endl;
+        mode = 2;
+    }
+
+    if (mode == 0) //interactive mode
+    {
+        vector<string> setA = {"data/3500.fasta","data/6995.fasta","data/13100.fasta","data/34350.fasta"};
+        vector<string> setB = {"data/3503.fasta","data/7031.fasta","data/14507.fasta","data/35213.fasta"};
+        int indexA;
+        int indexB;
+        cout << "length of sequence A(0:3500, 1:6995, 2:13100, 3:34350): ";
+        cin >> indexA;
+        cout << "length of sequence B(0:3503, 1:7031, 2:14507, 3:35213): ";
+        cin >> indexB;
+        cout << "\nThe sequence data is being read from the file..." << endl;
+        vector<string> sequences = readSequences(setA[indexA], setB[indexB]);
+        cout << "Reading has finished." << endl << endl;
+        int threads;
+        cout << "number of threads: ";
+        cin >> threads;
+        cout << "\nstart to time..." << endl;
+        clock_t start = clock();
+        myMatrix dp(sequences[0], sequences[1], threads);
+        dp.initialize();
+        dp.fillMatrix();
+        string alignmentA;
+        string alignmentB;
+        dp.backtracking(alignmentA, alignmentB);
+        clock_t end = clock();
+        cout << "Execution time: " << (end - start) << "ms" << endl;
+        system("pause");
+    }
+    else if (mode == 1) //file mode
+    {
+        vector<string> setA = {"data/3500.fasta","data/6995.fasta","data/13100.fasta","data/34350.fasta"};
+        vector<string> setB = {"data/3503.fasta","data/7031.fasta","data/14507.fasta","data/35213.fasta"};
+        vector<string> nameA = {"3500","13100","34350"};
+        vector<string> nameB = {"3503","14507","35213"};
+        vector<int> threads = {1,2,4,8};
+        vector<string> sequences;
+        clock_t start;
+        clock_t end;
+        clock_t execution_time;
+        clock_t serial_time;
+        string name;
+        ofstream ofile;
+        float speedUp;
+        cout << setw(15) << "SeqA:SeqB" << setw(22) << "Number of threads" << setw(23) << "Execution time(ms)" << setw(12) << "Speedup" << endl;
+        for (int i = 0; i < 4; i++) {
+            sequences = readSequences(setA[i], setB[i]);
+            for (int j = 0; j < 4; j++) {
+                start = clock();
+                myMatrix dp(sequences[0], sequences[1], threads[j]);
+                dp.initialize();
+                dp.fillMatrix();
+                string alignmentA;
+                string alignmentB;
+                dp.backtracking(alignmentA, alignmentB);
+                end = clock();
+                execution_time = end - start;
+                if (j == 0) serial_time = execution_time;
+                speedUp = (float)serial_time / execution_time;
+                name = "output/" + nameA[i] + "_" + nameB[i] + "_" + to_string(threads[j]) + ".txt";
+                ofile.open(name.c_str());
+                ofile << execution_time << endl;
+                ofile << setprecision(3) << speedUp;
+                ofile.close();
+                cout << setw(15) << nameA[i]+":"+nameB[i] << setw(22) << threads[j] << setw(23) << execution_time << setw(12) << setprecision(3) << speedUp << endl;
+            }
+            if (i == 3) continue;
+            sequences = readSequences(setA[i+1], setB[i]);
+            for (int j = 0; j < 4; j++) {
+                start = clock();
+                myMatrix dp(sequences[0], sequences[1], threads[j]);
+                dp.initialize();
+                dp.fillMatrix();
+                string alignmentA;
+                string alignmentB;
+                dp.backtracking(alignmentA, alignmentB);
+                end = clock();
+                execution_time = end - start;
+                if (j == 0) serial_time = execution_time;
+                speedUp = (float)serial_time / execution_time;
+                name = "output/" + nameA[i+1] + "_" + nameB[i] + "_" + to_string(threads[j]) + ".txt";
+                ofile.open(name.c_str());
+                ofile << execution_time << endl;
+                ofile << setprecision(3) << speedUp;
+                ofile.close();
+                cout << setw(15) << nameA[i+1]+":"+nameB[i] << setw(22) << threads[j] << setw(23) << execution_time << setw(12) << setprecision(3) << speedUp << endl;
+            }
+        }
+        system("pause");
+    }
+    else if (mode == 2) //help mode
+    {
+        cout << "Usage:" << endl;
+        cout << setw(40) << setiosflags(ios::left) << "./NW_OMP_Protein.exe" << "Interactive mode by default" << endl;
+        cout << setw(40) << setiosflags(ios::left) << "./NW_OMP_Protein.exe --interactive" << "Interactive mode by explicit command" << endl;
+        cout << setw(40) << setiosflags(ios::left) << "./NW_OMP_Protein.exe --file" << "File mode" << endl;
+        cout << setw(40) << setiosflags(ios::left) << "./NW_OMP_Protein.exe --help" << "Show the correct usage of the command" << endl;
+    }
 }
+
 
 void fillBlosum62(vector<vector<int>> &blosum62)
 {
